@@ -1,0 +1,16 @@
+shradhesh@shradhesh-Dell-G15-5511:~$ curl -X POST http://127.0.0.1:8080/signup \ 
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@com", "password": "pass1234"}'
+{"message":"User created successfully"}shradhesh@shradhesh-Dell-G15-5511:~$ ^C
+shradhesh@shradhesh-Dell-G15-5511:~$ curl -X POST http://127.0.0.1:8080/signin \ 
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@com", "password": "pass1234"}'
+{"token":"token-111304a6-6db9-4090-8b7e-ab79eeea11f0-1757353321"}shradhesh@shradhesh-Dell-G15-5511:~$ 
+
+
+{"id":"111304a6-6db9-4090-8b7e-ab79eeea11f0","email":"test@com",password: pass1234}
+
+
+# for database :
+PGPASSWORD=shradhesh71 psql -h localhost -U clippr_user -d Clippr_db 
+  =>     SELECT * FROM users;

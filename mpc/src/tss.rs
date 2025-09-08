@@ -7,7 +7,7 @@ use solana_sdk::signature::{Keypair, Signature, Signer, SignerError};
 use solana_sdk::{hash::Hash, pubkey::Pubkey, transaction::Transaction};
 
 use crate::serialization::{AggMessage1, Error as DeserializationError, PartialSignature, SecretAggStepOne};
-use crate::{create_unsigned_transaction, Error};
+use crate::error::Error;
 
 /// Create the aggregate public key, pass key=None if you don't care about the coefficient
 pub fn key_agg(keys: Vec<Pubkey>, key: Option<Pubkey>) -> Result<musig2::PublicKeyAgg, Error> {
@@ -24,9 +24,9 @@ pub fn key_agg(keys: Vec<Pubkey>, key: Option<Pubkey>) -> Result<musig2::PublicK
 
 /// Generate Message1 which contains nonce, public nonce, and commitment to nonces
 pub fn step_one(keypair: Keypair) -> (AggMessage1, SecretAggStepOne) {
-    let extended_kepair = ExpandedKeyPair::create_from_private_key(keypair.secret().to_bytes());
+    let extended_keypair = ExpandedKeyPair::create_from_private_key(keypair.secret().to_bytes());
     // we don't really need to pass a message here.
-    let (private_nonces, public_nonces) = musig2::generate_partial_nonces(&extended_kepair, None);
+    let (private_nonces, public_nonces) = musig2::generate_partial_nonces(&extended_keypair, None);
 
     (
         AggMessage1 { sender: keypair.pubkey(), public_nonces: public_nonces.clone() },

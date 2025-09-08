@@ -6,6 +6,10 @@ edition = "2024"
 [dependencies]
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "macros"] }
 bcrypt = "0.15"
 tokio = { version = "1.0", features = ["full"] }
+dotenv = "0.15"
+solana-sdk = "3.0.0"
+bs58 = "0.5.1"
+# store = { path = "../mpc" }

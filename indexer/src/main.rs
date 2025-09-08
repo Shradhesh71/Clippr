@@ -1,4 +1,5 @@
 use yellowstone::GeyserGrpcClient;
+use yellowstone_grpc_proto::geyser::geyser_client::GeyserClient;
 pub mod yellowstone;
 
 #[tokio::main]
