@@ -1,40 +1,30 @@
 use actix_web::{web, App, HttpResponse, HttpServer, middleware::Logger};
 
-mod error;
-pub mod serialization;
-// Temporarily disable TSS module due to Solana SDK compatibility issues
-// pub mod tss;
+// mod error;
+
 mod models;
 mod database;
-// Temporarily disable crypto module due to Solana SDK dependencies
-// mod crypto;
-// Temporarily disable simple MPC module due to version conflicts
-// mod simple_mpc;
 
 mod routes;
 use routes::*;
 
 use database::DatabaseManager;
-// use simple_mpc::MPCProtocol;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
-    // Initialize logger
-    env_logger::init();
     
-    // Load environment variables
     dotenv::dotenv().ok();
     
-    log::info!("🚀 MPC Server starting on http://127.0.0.1:8081");
+    println!("🚀 MPC Server starting on http://127.0.0.1:8081");
     
     // Initialize database connections
     let db_manager = match DatabaseManager::new().await {
         Ok(db) => {
-            log::info!("✅ Successfully connected to all MPC databases");
+            println!("✅ Successfully connected to all MPC databases");
             db
         }
         Err(e) => {
-            log::error!("❌ Failed to connect to databases: {}", e);
+            println!("❌ Failed to connect to databases: {}", e);
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!("Database connection failed: {}", e),
@@ -48,12 +38,12 @@ async fn main() -> Result<(), std::io::Error> {
             .wrap(Logger::default())
             .service(
                 web::scope("/api")
-                    .route("/generate", web::post().to(generate))
-                    .route("/send-single", web::post().to(send_single))
-                    .route("/aggregate-keys", web::post().to(aggregate_keys))
-                    .route("/agg-send-step1", web::post().to(routes::agg_send_step1))
-                    .route("/agg-send-step2", web::post().to(routes::agg_send_step2))
-                    .route("/aggregate-signatures-broadcast", web::post().to(routes::aggregate_signatures_broadcast))
+            //         .route("/generate", web::post().to(generate))
+            //         .route("/send-single", web::post().to(send_single))
+            //         .route("/aggregate-keys", web::post().to(aggregate_keys))
+            //         .route("/agg-send-step1", web::post().to(routes::agg_send_step1))
+            //         .route("/agg-send-step2", web::post().to(routes::agg_send_step2))
+            //         .route("/aggregate-signatures-broadcast", web::post().to(routes::aggregate_signatures_broadcast))
                     .route("/health", web::get().to(health_check))
             )
             .route("/", web::get().to(index))

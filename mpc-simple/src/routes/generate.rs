@@ -1,4 +1,3 @@
-
 use actix_web::{web, HttpResponse, Result};
 use serde_json::json;
 use uuid::Uuid;
@@ -6,27 +5,25 @@ use uuid::Uuid;
 use crate::{
     models::{GenerateRequest, GenerateResponse, KeyShare},
     database::DatabaseManager,
-    // Temporarily disable crypto module
-    // crypto::MPCCrypto,
 };
 
 pub async fn generate(
     db: web::Data<DatabaseManager>,
     req: web::Json<GenerateRequest>,
 ) -> Result<HttpResponse> {
-    log::info!("Generating threshold keypair for user: {}", req.user_id);
+    println!("Generating threshold keypair for user: {}", req.user_id);
     
     // Check if user already has shares
     match db.user_has_shares(&req.user_id).await {
         Ok(true) => {
-            log::warn!("User {} already has key shares", req.user_id);
+            println!("User {} already has key shares", req.user_id);
             return Ok(HttpResponse::BadRequest().json(json!({
                 "error": "User already has key shares generated"
             })));
         }
         Ok(false) => {} // Continue with generation
         Err(e) => {
-            log::error!("Database error checking user shares: {}", e);
+            println!("Database error checking user shares: {}", e);
             return Ok(HttpResponse::InternalServerError().json(json!({
                 "error": "Database error"
             })));
@@ -80,8 +77,8 @@ pub async fn generate(
     ];
 
     let public_key_str = public_key.clone();
-    log::info!("Generated public key: {} for user: {}", public_key_str, req.user_id);
-    
+    println!("Generated public key: {} for user: {}", public_key_str, req.user_id);
+
     // Store shares in different databases
     let mut storage_success = true;
     
@@ -90,20 +87,20 @@ pub async fn generate(
         let db_index = (key_share.share_index - 1) as usize;
         
         if let Err(e) = db.store_key_share(&key_share, db_index).await {
-            log::error!("Failed to store share {} for user {}: {}", 
+            println!("Failed to store share {} for user {}: {}", 
                        key_share.share_index, req.user_id, e);
             storage_success = false;
             break;
         }
         
-        log::info!("Stored share {} for user {} in database {}", 
+        println!("Stored share {} for user {} in database {}", 
                   key_share.share_index, req.user_id, db_index + 1);
     }
     
     if !storage_success {
         // Cleanup - delete any stored shares
         if let Err(e) = db.delete_user_shares(&req.user_id).await {
-            log::error!("Failed to cleanup shares for user {}: {}", req.user_id, e);
+            println!("Failed to cleanup shares for user {}: {}", req.user_id, e);
         }
         
         return Ok(HttpResponse::InternalServerError().json(json!({
@@ -116,7 +113,7 @@ pub async fn generate(
         public_key: public_key_str,
         shares_created: true,
     };
-    
-    log::info!("Successfully generated and stored key shares for user: {}", req.user_id);
+
+    println!("Successfully generated and stored key shares for user: {}", req.user_id);
     Ok(HttpResponse::Ok().json(response))
 }

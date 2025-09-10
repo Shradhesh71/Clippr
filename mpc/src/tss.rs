@@ -4,10 +4,51 @@ use curv::elliptic::curves::{Ed25519, Point, Scalar};
 use multi_party_eddsa::protocols::musig2::{self, PrivatePartialNonces, PublicPartialNonces};
 use multi_party_eddsa::protocols::ExpandedKeyPair;
 use solana_sdk::signature::{Keypair, Signature, Signer, SignerError};
-use solana_sdk::{hash::Hash, pubkey::Pubkey, transaction::Transaction};
+use solana_sdk::{pubkey::Pubkey};
 
 use crate::serialization::{AggMessage1, Error as DeserializationError, PartialSignature, SecretAggStepOne};
 use crate::error::Error;
+
+// Add transaction creation utilities
+use solana_sdk::{
+    instruction::Instruction,
+    message::Message,
+};
+use solana_system_program::system_instruction;
+
+/// Create an unsigned transaction for testing
+fn create_unsigned_transaction(
+    amount: f64,
+    to: &Pubkey,
+    memo: Option<String>,
+    from: &Pubkey,
+) -> solana_sdk::transaction::Transaction {
+    let lamports = (amount * 1_000_000_000.0) as u64; // Convert SOL to lamports
+    
+    let mut instructions = vec![
+        system_instruction::transfer(from, to, lamports),
+    ];
+    
+    // Add memo instruction if provided
+    if let Some(memo_text) = memo {
+        // Create a simple memo instruction manually
+        let memo_program_id = Pubkey::new_from_array([
+            5, 90, 151, 59, 94, 118, 204, 146, 41, 39, 85, 68, 98, 180, 204, 161,
+            15, 75, 83, 58, 116, 221, 244, 75, 57, 14, 106, 16, 0, 0, 0, 0
+        ]); // spl-memo program ID
+        
+        instructions.push(
+            Instruction::new_with_bytes(
+                memo_program_id,
+                memo_text.as_bytes(),
+                vec![],
+            )
+        );
+    }
+    
+    let message = Message::new(&instructions, Some(from));
+    solana_sdk::transaction::Transaction::new_unsigned(message)
+}
 
 /// Create the aggregate public key, pass key=None if you don't care about the coefficient
 pub fn key_agg(keys: Vec<Pubkey>, key: Option<Pubkey>) -> Result<musig2::PublicKeyAgg, Error> {
@@ -24,7 +65,7 @@ pub fn key_agg(keys: Vec<Pubkey>, key: Option<Pubkey>) -> Result<musig2::PublicK
 
 /// Generate Message1 which contains nonce, public nonce, and commitment to nonces
 pub fn step_one(keypair: Keypair) -> (AggMessage1, SecretAggStepOne) {
-    let extended_keypair = ExpandedKeyPair::create_from_private_key(keypair.secret().to_bytes());
+    let extended_keypair = ExpandedKeyPair::create_from_private_key(keypair.secret_bytes().to_vec());
     // we don't really need to pass a message here.
     let (private_nonces, public_nonces) = musig2::generate_partial_nonces(&extended_keypair, None);
 
