@@ -17,13 +17,6 @@ pub struct SignInRequest {
 }
 
 #[derive(Serialize)]
-pub struct UserResponse {
-    pub id: String,
-    pub email: String,
-    pub created_at: String,
-}
-
-#[derive(Serialize)]
 pub struct AuthResponse {
     pub token: String,
 }
@@ -125,12 +118,7 @@ pub async fn get_user(
     let store_guard = store.lock().await;
     match store_guard.get_user_by_id(&user_id).await {
         Ok(user) => {
-            let response = UserResponse {
-                id: user.id,
-                email: user.email,
-                created_at: user.created_at,
-            };
-            Ok(HttpResponse::Ok().json(response))
+            Ok(HttpResponse::Ok().json(user))
         }
         Err(e) => {
             eprintln!("Error fetching user: {}", e);

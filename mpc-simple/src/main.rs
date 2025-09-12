@@ -38,9 +38,10 @@ async fn main() -> Result<(), std::io::Error> {
             .wrap(Logger::default())
             .service(
                 web::scope("/api")
-            //         .route("/generate", web::post().to(generate))
+                    .route("/generate", web::post().to(generate))
             //         .route("/send-single", web::post().to(send_single))
-            //         .route("/aggregate-keys", web::post().to(aggregate_keys))
+                    .route("/aggregate", web::post().to(aggregate_keys))
+                    .route("/send-sol", web::post().to(send_sol))
             //         .route("/agg-send-step1", web::post().to(routes::agg_send_step1))
             //         .route("/agg-send-step2", web::post().to(routes::agg_send_step2))
             //         .route("/aggregate-signatures-broadcast", web::post().to(routes::aggregate_signatures_broadcast))
@@ -61,7 +62,8 @@ async fn index() -> HttpResponse {
         "endpoints": [
             "POST /api/generate - Generate threshold keypair",
             "POST /api/send-single - Check single key share",
-            "POST /api/aggregate-keys - Create threshold signature",
+            "POST /api/aggregate - Aggregate keys for user", 
+            "POST /api/send-sol - Send SOL transaction using aggregated keys",
             "POST /api/agg-send-step1 - MPC Step 1",
             "POST /api/agg-send-step2 - MPC Step 2", 
             "POST /api/aggregate-signatures-broadcast - Aggregate signatures",

@@ -36,7 +36,8 @@ impl DatabaseManager {
     }
 
     async fn initialize_tables(pool: &PgPool) -> Result<()> {
-        let query = r#"
+        // Create key_shares table
+        let key_shares_query = r#"
             CREATE TABLE IF NOT EXISTS key_shares (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 user_id TEXT NOT NULL,
@@ -47,11 +48,19 @@ impl DatabaseManager {
                 total_shares INTEGER NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 UNIQUE(user_id, share_index)
-            );
+            )
+        "#;
 
-            CREATE INDEX IF NOT EXISTS idx_key_shares_user_id ON key_shares(user_id);
-            CREATE INDEX IF NOT EXISTS idx_key_shares_share_index ON key_shares(share_index);
+        sqlx::query(key_shares_query).execute(pool).await?;
 
+        // Create indexes for key_shares
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_key_shares_user_id ON key_shares(user_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_key_shares_share_index ON key_shares(share_index)")
+            .execute(pool).await?;
+
+        // Create mpc_sessions table
+        let mpc_sessions_query = r#"
             CREATE TABLE IF NOT EXISTS mpc_sessions (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 session_id TEXT UNIQUE NOT NULL,
@@ -64,13 +73,17 @@ impl DatabaseManager {
                 message_to_sign TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_mpc_sessions_session_id ON mpc_sessions(session_id);
-            CREATE INDEX IF NOT EXISTS idx_mpc_sessions_user_id ON mpc_sessions(user_id);
+            )
         "#;
 
-        sqlx::query(query).execute(pool).await?;
+        sqlx::query(mpc_sessions_query).execute(pool).await?;
+
+        // Create indexes for mpc_sessions
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_mpc_sessions_session_id ON mpc_sessions(session_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_mpc_sessions_user_id ON mpc_sessions(user_id)")
+            .execute(pool).await?;
+
         Ok(())
     }
 

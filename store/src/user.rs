@@ -1,17 +1,26 @@
-use crate::{error::UserError, helper::{generate_token, generate_keypair}, Store};
+use crate::{error::UserError, helper::generate_token, Store};
 use uuid::Uuid;
 use chrono::Utc;
 use sqlx::Row;
-// use solana_sdk::{
-//     signature::{Keypair, Signer},
-//     pubkey::Pubkey,
-// };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,
-    pub created_at: String,
+    pub password: String,
+    pub created_at: chrono::DateTime<Utc>,
+    pub updated_at: chrono::DateTime<Utc>,
+    pub public_key: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserResponse {
+    pub id: String,
+    pub email: String,
+    pub created_at: chrono::DateTime<Utc>,
+    pub updated_at: chrono::DateTime<Utc>,
+    pub public_key: Option<String>,
 }
 
 #[derive(Debug)]
@@ -32,19 +41,58 @@ pub struct KeypairData {
     pub secret: String,
 }
 
+// Models for MPC-Simple service communication
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateRequest {
+    pub user_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateResponse {
+    pub user_id: String,
+    pub public_key: String,
+    pub shares_created: bool,
+}
+
 impl Store {
-    pub async fn create_user(&self, request: CreateUserRequest) -> Result<User, UserError> {
-        // Validate email format
+    // function to call MPC-Simple service to generate keypair
+    async fn generate_keypair_via_mpc(&self, user_id: &str) -> Result<String, UserError> {
+        let client = reqwest::Client::new();
+        let mpc_service_url = std::env::var("MPC_SIMPLE_URL")
+            .unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
+        
+        let request = GenerateRequest {
+            user_id: user_id.to_string(),
+        };
+
+        let response = client
+            .post(&format!("{}/api/generate", mpc_service_url))
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| UserError::DatabaseError(format!("Failed to call MPC service: {}", e)))?;
+
+        if response.status().is_success() {
+            let generate_response: GenerateResponse = response
+                .json()
+                .await
+                .map_err(|e| UserError::DatabaseError(format!("Failed to parse MPC response: {}", e)))?;
+            
+            Ok(generate_response.public_key)
+        } else {
+            Err(UserError::DatabaseError(format!("MPC service returned error: {}", response.status())))
+        }
+    }
+
+    pub async fn create_user(&self, request: CreateUserRequest) -> Result<UserResponse, UserError> {
         if !request.email.contains('@') {
             return Err(UserError::InvalidInput("Invalid email format".to_string()));
         }
 
-        // Validate password length
         if request.password.len() < 6 {
             return Err(UserError::InvalidInput("Password must be at least 6 characters".to_string()));
         }
 
-        // Check if user already exists
         let existing_user = sqlx::query("SELECT id FROM users WHERE email = $1")
             .bind(&request.email)
             .fetch_optional(&self.pool)
@@ -55,15 +103,15 @@ impl Store {
             return Err(UserError::UserExists);
         }
 
-        // Hash the password
+        // hash the password
         let password_hash = bcrypt::hash(&request.password, bcrypt::DEFAULT_COST)
             .map_err(|e| UserError::DatabaseError(format!("Password hashing failed: {}", e)))?;
 
-        // Generate user ID and timestamp
         let user_id = Uuid::new_v4().to_string();
         let created_at = Utc::now();
 
-        // let user_keypair = 
+        // Generate keypair via MPC-Simple service
+        let public_key = self.generate_keypair_via_mpc(&user_id).await?;
 
         // Insert user into database
         sqlx::query("INSERT INTO users (id, email, password_hash, created_at, update_at, publicKey) VALUES ($1, $2, $3, $4, $5, $6)")
@@ -72,23 +120,24 @@ impl Store {
             .bind(&password_hash)
             .bind(&created_at)
             .bind(&created_at)
-            .bind(&user_keypair.pubkey)
+            .bind(&public_key)
             .execute(&self.pool)
             .await
             .map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
-        // Return the created user
-        let user = User {
+        let user = UserResponse {
             id: user_id,
             email: request.email,
-            created_at: created_at.to_rfc3339(),
+            created_at,
+            updated_at: created_at,
+            public_key: Some(public_key),
         };
 
         Ok(user)
     }
 
     pub async fn authenticate_user(&self, email: &str, password: &str) -> Result<String, UserError> {
-        // Validate input
+        // validate input
         if email.is_empty() || password.is_empty() {
             return Err(UserError::InvalidInput("Email and password cannot be empty".to_string()));
         }
@@ -136,8 +185,8 @@ impl Store {
     //     }
     // }
 
-    pub async fn get_user_by_id(&self, user_id: &str) -> Result<User, UserError> {
-        let user = sqlx::query("SELECT id, email, created_at FROM users WHERE id = $1")
+    pub async fn get_user_by_id(&self, user_id: &str) -> Result<UserResponse, UserError> {
+        let user = sqlx::query("SELECT id, email, created_at, updated_at, public_key FROM users WHERE id = $1")
             .bind(user_id)
             .fetch_optional(&self.pool)
             .await
@@ -147,11 +196,15 @@ impl Store {
             let id: String = row.try_get("id").map_err(|e| UserError::DatabaseError(e.to_string()))?;
             let email: String = row.try_get("email").map_err(|e| UserError::DatabaseError(e.to_string()))?;
             let created_at: chrono::DateTime<Utc> = row.try_get("created_at").map_err(|e| UserError::DatabaseError(e.to_string()))?;
+            let updated_at: chrono::DateTime<Utc> = row.try_get("updated_at").map_err(|e| UserError::DatabaseError(e.to_string()))?;
+            let public_key: Option<String> = row.try_get("public_key").map_err(|e| UserError::DatabaseError(e.to_string()))?;
 
-            Ok(User {
+            Ok(UserResponse {
                 id,
                 email,
-                created_at: created_at.to_rfc3339(),
+                created_at,
+                updated_at,
+                public_key,
             })
         } else {
             Err(UserError::UserNotFound)

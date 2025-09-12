@@ -1,6 +1,9 @@
 pub mod user;
 pub mod helper;
 pub mod error;
+pub mod quote;
+pub mod asset;
+pub mod balance;
 
 use sqlx::{postgres::PgPoolOptions, PgPool};
 

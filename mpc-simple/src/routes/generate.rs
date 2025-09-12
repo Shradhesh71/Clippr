@@ -1,9 +1,12 @@
 use actix_web::{web, HttpResponse, Result};
 use serde_json::json;
 use uuid::Uuid;
-
+use solana_sdk::{
+    bs58, signature::Keypair, signer:: Signer
+};
+    
 use crate::{
-    models::{GenerateRequest, GenerateResponse, KeyShare},
+    models::{GenerateRequest, GenerateResponse},
     database::DatabaseManager,
 };
 
@@ -29,26 +32,20 @@ pub async fn generate(
             })));
         }
     }
-    
-    // Generate threshold keypair using MPC crypto (placeholder)
-    // TODO: Re-enable once crypto module is fixed
-    // let (public_key, shares) = match MPCCrypto::generate_threshold_keypair(2, 3) {
-    //     Ok((pk, shares)) => (pk, shares),
-    //     Err(e) => {
-    //         return Ok(HttpResponse::InternalServerError().json(json!({
-    //             "error": format!("Failed to generate keypair: {}", e)
-    //         })));
-    //     }
-    // };
 
-    // Placeholder implementation for now
-    let public_key = format!("pk_placeholder_{}", req.user_id);
+    let keypair = Keypair::new();
+    let pubkey = keypair.pubkey();
+    let private_key_bytes = bs58::encode(keypair.to_bytes()).into_string();
+
+    let secret_key = &private_key_bytes[..32]; // First 32 bytes are the secret key
+    let public_key = pubkey.to_string();
+
     let shares = vec![
         crate::models::KeyShare {
             id: Uuid::new_v4(),
             user_id: req.user_id.clone(),
             public_key: public_key.clone(),
-            encrypted_share: "encrypted_share_1".to_string(),
+            encrypted_share: secret_key.chars().take(10).collect::<String>(),
             share_index: 1,
             threshold: 2,
             total_shares: 3,
@@ -58,7 +55,7 @@ pub async fn generate(
             id: Uuid::new_v4(),
             user_id: req.user_id.clone(),
             public_key: public_key.clone(),
-            encrypted_share: "encrypted_share_2".to_string(),
+            encrypted_share: secret_key.chars().skip(10).take(10).collect::<String>(),
             share_index: 2,
             threshold: 2,
             total_shares: 3,
@@ -68,7 +65,7 @@ pub async fn generate(
             id: Uuid::new_v4(),
             user_id: req.user_id.clone(),
             public_key: public_key.clone(),
-            encrypted_share: "encrypted_share_3".to_string(),
+            encrypted_share: secret_key.chars().skip(20).take(12).collect::<String>(),
             share_index: 3,
             threshold: 2,
             total_shares: 3,

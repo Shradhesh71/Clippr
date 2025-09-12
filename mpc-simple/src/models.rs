@@ -40,3 +40,17 @@ pub struct GenerateResponse {
     pub public_key: String,
     pub shares_created: bool,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AggregateRequest {
+    pub user_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AggregateResponse {
+    pub user_id: String,
+    pub public_key: String,
+    pub private_key: String, // Reconstructed private key
+    pub shares_used: Vec<i32>, // Which share indices were used
+    pub success: bool,
+}

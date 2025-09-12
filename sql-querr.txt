@@ -1,0 +1,65 @@
+sudo -u postgres psql -d Clippr_db -c "
+-- Update users table to match the schema
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW(),
+ADD COLUMN IF NOT EXISTS public_key TEXT;
+
+-- Create assets table
+CREATE TABLE IF NOT EXISTS assets (
+    id TEXT PRIMARY KEY,
+    mint_address TEXT UNIQUE NOT NULL,
+    decimals INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    logo_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create balances table
+CREATE TABLE IF NOT EXISTS balances (
+    id TEXT PRIMARY KEY,
+    amount DECIMAL NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    UNIQUE(user_id, asset_id)
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_balances_user_id ON balances(user_id);
+CREATE INDEX IF NOT EXISTS idx_balances_asset_id ON balances(asset_id);
+CREATE INDEX IF NOT EXISTS idx_assets_mint_address ON assets(mint_address);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+"
+
+
+
+
+//////////////////2
+sudo -u postgres psql -d Clippr_db -c "
+GRANT ALL PRIVILEGES ON TABLE assets TO clippr_user;
+GRANT ALL PRIVILEGES ON TABLE balances TO clippr_user;
+"
+
+
+//////////////3
+sudo -u postgres psql -d Clippr_db -c "
+-- Insert SOL asset
+INSERT INTO assets (id, mint_address, decimals, name, symbol, logo_url) 
+VALUES 
+    ('sol-native', 'So11111111111111111111111111111111111111112', 9, 'Solana', 'SOL', 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'),
+    ('usdc-spl', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 6, 'USD Coin', 'USDC', 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png')
+ON CONFLICT (mint_address) DO NOTHING;
+"
+
+
+
+/////////////4
+psql postgresql://clippr_user:shradhesh71@localhost:5432/Clippr_db 
+-c "SELECT id, mint_address, symbol FROM assets WHERE symbol = 'SOL';"
+
+
+
+
