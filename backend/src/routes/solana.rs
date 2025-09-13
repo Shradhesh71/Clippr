@@ -59,7 +59,7 @@ pub async fn send_sol(
 ) -> Result<HttpResponse> {
     println!("Processing SOL transfer request for user: {}", req.user_id);
     
-    // SOL asset ID (native Solana)
+    // SOL asset ID 
     const SOL_ASSET_ID: &str = "sol-native";
     
     // Convert lamports to SOL (1 SOL = 1_000_000_000 lamports)
@@ -107,7 +107,7 @@ pub async fn send_sol(
         })));
     }
     
-    // Decrease the balance first (optimistic approach)
+    // decrease the balance first 
     let new_balance = current_balance.amount - sol_amount;
     let update_request = store::balance::UpdateBalanceRequest {
         user_id: req.user_id.clone(),
@@ -133,10 +133,10 @@ pub async fn send_sol(
     println!("Updated user {} balance from {} to {} SOL", 
              req.user_id, current_balance.amount, updated_balance.amount);
     
-    // Release the store lock before making external call
+    // release the store lock before making external call
     drop(store_guard);
     
-    // Forward the request to MPC service for secure key aggregation and transaction signing
+    // forward the request to MPC service for secure key aggregation and transaction signing
     let mpc_service_url = std::env::var("MPC_SIMPLE_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
     
@@ -185,7 +185,7 @@ pub async fn send_sol(
         }
     };
     
-    // Check if MPC service request was successful
+    // check if MPC service request was successful
     if !mpc_response.status().is_success() {
         let error_text = mpc_response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
         println!("MPC service returned error: {}", error_text);

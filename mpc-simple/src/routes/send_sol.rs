@@ -176,6 +176,10 @@ pub async fn send_sol(
     println!("Successfully sent {} lamports from {} to {} for user {}. Signature: {}", 
              req.amount_lamports, from_pubkey, to_pubkey, req.user_id, signature);
 
+    // Clear the private key from memory for security
+    drop(keypair);
+    drop(reconstructed_private_key);
+
     // Step 9: Return success response
     Ok(HttpResponse::Ok().json(SendSolResponse {
         success: true,
@@ -208,7 +212,7 @@ fn encode_transfer_instruction(lamports: u64) -> Vec<u8> {
     data
 }
 
-fn parse_private_key(private_key_str: &str) -> Result<Keypair, Box<dyn std::error::Error>> {
+pub fn parse_private_key(private_key_str: &str) -> Result<Keypair, Box<dyn std::error::Error>> {
     // Try different formats for private key parsing
     
     // First, try as base58 string (common format)
@@ -240,7 +244,7 @@ fn parse_private_key(private_key_str: &str) -> Result<Keypair, Box<dyn std::erro
     Err("Unable to parse private key in any recognized format".into())
 }
 
-fn create_rpc_client() -> RpcClient {
+pub fn create_rpc_client() -> RpcClient {
     // Use devnet for testing, mainnet for production
     let rpc_url = std::env::var("SOLANA_RPC_URL")
         .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());

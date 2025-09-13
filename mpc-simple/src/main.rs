@@ -42,6 +42,7 @@ async fn main() -> Result<(), std::io::Error> {
             //         .route("/send-single", web::post().to(send_single))
                     .route("/aggregate", web::post().to(aggregate_keys))
                     .route("/send-sol", web::post().to(send_sol))
+                    .route("/jupiter-swap", web::post().to(jupiter_swap))
             //         .route("/agg-send-step1", web::post().to(routes::agg_send_step1))
             //         .route("/agg-send-step2", web::post().to(routes::agg_send_step2))
             //         .route("/aggregate-signatures-broadcast", web::post().to(routes::aggregate_signatures_broadcast))
@@ -64,6 +65,7 @@ async fn index() -> HttpResponse {
             "POST /api/send-single - Check single key share",
             "POST /api/aggregate - Aggregate keys for user", 
             "POST /api/send-sol - Send SOL transaction using aggregated keys",
+            "POST /api/jupiter-swap - Execute Jupiter swap with MPC signing",
             "POST /api/agg-send-step1 - MPC Step 1",
             "POST /api/agg-send-step2 - MPC Step 2", 
             "POST /api/aggregate-signatures-broadcast - Aggregate signatures",

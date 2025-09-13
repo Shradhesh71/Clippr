@@ -79,7 +79,7 @@ pub async fn generate(
     // Store shares in different databases
     let mut storage_success = true;
     
-    for (i, key_share) in shares.iter().enumerate() {        
+    for (_i, key_share) in shares.iter().enumerate() {        
         // Store in the corresponding database (share_index 1->db0, 2->db1, 3->db2)
         let db_index = (key_share.share_index - 1) as usize;
         
