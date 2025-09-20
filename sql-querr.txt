@@ -62,4 +62,8 @@ psql postgresql://clippr_user:shradhesh71@localhost:5432/Clippr_db
 
 
 
+////  for new database
+ 
+sudo -u postgres psql
+
 
